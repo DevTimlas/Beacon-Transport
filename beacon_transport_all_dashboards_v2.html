@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beacon Transport · Dashboard Preview</title>
+  <style>
+    :root {
+      --bt-blue: #1D5E8A;
+      --bt-blue-mid: #2E75B6;
+      --bt-blue-light: #E6F1FB;
+      --bt-teal: #1D9E75;
+      --bt-teal-light: #E1F5EE;
+      --font: system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+      --text-primary: #1e1e1c;
+      --text-secondary: #5e5e5a;
+      --text-muted: #8a8a84;
+      --bg-primary: #ffffff;
+      --bg-secondary: #f9f9f6;
+      --bg-page: #f2f4f7;
+      --border: #e2e2da;
+      --border-mid: #cccccc;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); font-size: 14px; color: var(--text-primary); background: var(--bg-page); }
+
+    /* ── Top nav ── */
+    .topnav {
+      background: var(--bg-primary);
+      border-bottom: 0.5px solid var(--border);
+      padding: 0 20px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .topnav-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; font-size: 15px; color: var(--bt-blue);
+    }
+    .topnav-logo {
+      width: 26px; height: 26px; background: var(--bt-blue);
+      border-radius: 6px; position: relative;
+    }
+    .topnav-logo::after {
+      content: ''; position: absolute; inset: 5px;
+      border: 2px solid #fff; border-radius: 3px;
+    }
+    .topnav-tabs {
+      display: flex; gap: 2px;
+    }
+    .topnav-tab {
+      padding: 6px 16px; border-radius: 6px; cursor: pointer;
+      font-size: 13px; font-weight: 500; color: var(--text-secondary);
+      background: none; border: none; transition: all 0.15s;
+    }
+    .topnav-tab:hover { background: var(--bg-secondary); color: var(--text-primary); }
+    .topnav-tab.active { background: var(--bt-blue-light); color: var(--bt-blue); font-weight: 600; }
+    .topnav-tab.active-teal { background: var(--bt-teal-light); color: var(--bt-teal); font-weight: 600; }
+    .topnav-right { display: flex; align-items: center; gap: 8px; }
+
+    /* ── Portal layout ── */
+    .portal { display: flex; min-height: calc(100vh - 52px); }
+    .panel { display: none; width: 100%; }
+    .panel.active { display: flex; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 210px; flex-shrink: 0;
+      background: var(--bg-primary);
+      border-right: 0.5px solid var(--border);
+      display: flex; flex-direction: column;
+    }
+    .sidebar-header {
+      padding: 18px 14px 14px;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .sidebar-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 13px; margin-bottom: 8px;
+    }
+    .sidebar-avatar--op { background: var(--bt-blue-light); color: var(--bt-blue); }
+    .sidebar-avatar--dr { background: var(--bt-teal-light); color: var(--bt-teal); }
+    .sidebar-name { font-weight: 600; font-size: 13px; }
+    .sidebar-role { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .sidebar-nav { flex: 1; padding: 10px 8px; display: flex; flex-direction: column; gap: 2px; }
+    .sidebar-link {
+      display: flex; align-items: center; gap: 9px; padding: 8px 10px;
+      border-radius: 7px; color: var(--text-secondary); text-decoration: none;
+      font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.12s;
+      border: none; background: none; width: 100%; text-align: left;
+    }
+    .sidebar-link:hover { background: var(--bg-secondary); color: var(--text-primary); }
+    .sidebar-link.active-op { background: var(--bt-blue-light); color: var(--bt-blue); }
+    .sidebar-link.active-dr { background: var(--bt-teal-light); color: var(--bt-teal); }
+    .sidebar-icon { font-size: 15px; width: 18px; text-align: center; }
+    .sidebar-footer { padding: 12px 14px; border-top: 0.5px solid var(--border); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .status-dot--active { background: #198754; }
+    .status-dot--pending { background: #ffc107; }
+    .status-dot--suspended { background: #dc3545; }
+
+    /* ── Main content ── */
+    .main { flex: 1; background: var(--bg-page); overflow-y: auto; }
+    .main-inner { padding: 24px 26px; max-width: 1000px; }
+
+    /* ── Page header ── */
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px; gap: 12px;
+    }
+    .page-title { font-size: 20px; font-weight: 700; }
+    .page-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
+      cursor: pointer; border: 0.5px solid var(--border); background: var(--bg-primary);
+      color: var(--text-primary); transition: background 0.1s;
+    }
+    .btn:hover { background: var(--bg-secondary); }
+    .btn-op { background: var(--bt-blue); color: #fff; border-color: var(--bt-blue); }
+    .btn-op:hover { background: #174f76; }
+    .btn-dr { background: var(--bt-teal); color: #fff; border-color: var(--bt-teal); }
+    .btn-dr:hover { background: #0f6e56; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn-danger { border-color: #f5c2c7; color: #842029; background: #fff; }
+    .btn-danger:hover { background: #f8d7da; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--bg-primary); border: 0.5px solid var(--border);
+      border-radius: 12px; padding: 16px;
+    }
+    .card-hdr {
+      font-size: 13px; font-weight: 600; margin-bottom: 14px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    /* ── Metrics ── */
+    .metrics { display: grid; gap: 12px; margin-bottom: 20px; }
+    .metrics-4 { grid-template-columns: repeat(4, 1fr); }
+    .metrics-3 { grid-template-columns: repeat(3, 1fr); }
+    .metric {
+      background: var(--bg-primary); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 14px;
+    }
+    .metric-val { font-size: 26px; font-weight: 600; margin-top: 4px; line-height: 1; }
+    .metric-lbl { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+    .metric-icon {
+      width: 32px; height: 32px; border-radius: 8px; margin-bottom: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
+    }
+    .icon-blue { background: var(--bt-blue-light); color: var(--bt-blue); }
+    .icon-green { background: #d1e7dd; color: #0a3622; }
+    .icon-amber { background: #fff3cd; color: #664d03; }
+    .icon-red { background: #f8d7da; color: #842029; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block; padding: 2px 9px; border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge-success { background: #d1e7dd; color: #0a3622; }
+    .badge-warn    { background: #fff3cd; color: #664d03; }
+    .badge-danger  { background: #f8d7da; color: #842029; }
+    .badge-info    { background: var(--bt-blue-light); color: #0C447C; }
+    .badge-neutral { background: #e9ecef; color: #495057; }
+    .badge-teal    { background: var(--bt-teal-light); color: #085041; }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      text-align: left; font-weight: 500; font-size: 11px; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 8px 12px; border-bottom: 0.5px solid var(--border);
+      background: var(--bg-secondary);
+    }
+    td { padding: 10px 12px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg-secondary); }
+
+    /* ── Driver avatar ── */
+    .avatar {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; background: var(--bt-blue-light); color: var(--bt-blue);
+    }
+    .avatar-lg {
+      width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700; background: var(--bt-blue-light); color: var(--bt-blue);
+    }
+    .avatar-dr { background: var(--bt-teal-light); color: var(--bt-teal); }
+    .avatar-suspended { background: #f8d7da; color: #842029; }
+
+    /* ── Progress bar ── */
+    .progbar { height: 6px; border-radius: 3px; background: var(--border); flex: 1; overflow: hidden; }
+    .progfill { height: 100%; border-radius: 3px; }
+
+    /* ── Section rows / lists ── */
+    .list-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 0; border-bottom: 0.5px solid var(--border);
+    }
+    .list-row:last-child { border-bottom: none; }
+
+    /* ── Alerts ── */
+    .alert { border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 10px; }
+    .alert-warn    { background: #fff3cd; color: #664d03; border: 0.5px solid #ffc107; }
+    .alert-danger  { background: #f8d7da; color: #842029; border: 0.5px solid #f5c2c7; }
+    .alert-success { background: #d1e7dd; color: #0a3622; border: 0.5px solid #a3cfbb; }
+    .alert-info    { background: var(--bt-blue-light); color: #0C447C; border: 0.5px solid #90caf9; }
+
+    /* ── Score rings ── */
+    .score-ring {
+      width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 700;
+    }
+    .ring-pass { background: #d1e7dd; color: #0a3622; border: 2px solid #86cfac; }
+    .ring-warn { background: #fff3cd; color: #664d03; border: 2px solid #ffc107; }
+    .ring-fail { background: #f8d7da; color: #842029; border: 2px solid #f5c2c7; }
+
+    /* ── Profile fields ── */
+    .field-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 7px 0; border-bottom: 0.5px solid var(--border); font-size: 13px;
+    }
+    .field-row:last-child { border-bottom: none; }
+    .field-label { color: var(--text-muted); font-size: 12px; }
+    .field-value { font-weight: 500; max-width: 58%; text-align: right; }
+
+    /* ── Cred fields (status page) ── */
+    .cred-block {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px 0; border-bottom: 0.5px solid var(--border);
+    }
+    .cred-block:last-child { border-bottom: none; }
+    .cred-icon {
+      width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 16px;
+    }
+    .cred-icon-ok  { background: #d1e7dd; color: #0a3622; }
+    .cred-icon-bad { background: #f8d7da; color: #842029; }
+    .cred-icon-warn{ background: #fff3cd; color: #664d03; }
+    .cred-icon-none{ background: var(--bg-secondary); color: var(--text-muted); }
+
+    /* ── QR card ── */
+    .qr-card {
+      border: 1.5px solid var(--border); border-radius: 14px; overflow: hidden;
+      background: var(--bg-primary); max-width: 340px;
+    }
+    .qr-card-top { background: var(--bt-blue); color: #fff; padding: 14px 18px; }
+    .qr-card-brand { font-weight: 700; font-size: 15px; }
+    .qr-card-sub { font-size: 11px; opacity: 0.75; }
+    .qr-card-body { padding: 16px 18px; }
+    .qr-placeholder {
+      width: 160px; height: 160px; background: var(--bg-secondary);
+      border: 0.5px solid var(--border); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; color: var(--text-muted); margin: 0 auto 14px;
+      position: relative;
+    }
+    .qr-grid {
+      position: absolute; inset: 12px;
+      display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px;
+    }
+    .qr-cell { border-radius: 1px; }
+    .qr-card-field {
+      display: flex; justify-content: space-between; font-size: 12px;
+      padding: 4px 0; border-bottom: 0.5px solid var(--border);
+    }
+    .qr-card-field:last-child { border-bottom: none; }
+    .qr-card-field .lbl { color: var(--text-muted); }
+    .qr-card-footer {
+      background: var(--bg-secondary); padding: 8px 18px;
+      font-size: 10px; color: var(--text-muted); border-top: 0.5px solid var(--border);
+    }
+
+    /* ── Upload zone ── */
+    .upload-zone {
+      border: 0.5px dashed var(--border-mid); border-radius: 8px;
+      padding: 20px; text-align: center; color: var(--text-muted);
+      font-size: 13px; background: var(--bg-secondary);
+    }
+
+    /* ── Timeline ── */
+    .tl-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+
+    /* ── Section title ── */
+    .section-title {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--text-muted); margin: 20px 0 10px;
+    }
+
+    /* ── Big status (credential page) ── */
+    .big-status { font-size: 42px; margin-bottom: 8px; }
+    .big-status-ok   { color: #198754; }
+    .big-status-warn { color: #664d03; }
+    .big-status-bad  { color: #842029; }
+
+    /* ── Completion ring ── */
+    .comp-ring {
+      width: 52px; height: 52px; border-radius: 50%;
+      border: 3px solid var(--bt-blue-light); background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: var(--bt-blue);
+    }
+
+    /* ── Section-by-section grid ── */
+    .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }
+    .section-row2 {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 0; border-bottom: 0.5px solid var(--border);
+    }
+    .section-row2:last-child { border-bottom: none; }
+
+    /* ── Audit hash ── */
+    .hash { font-family: monospace; font-size: 11px; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<!-- ── TOP NAV ── -->
+<div class="topnav">
+  <div class="topnav-brand">
+    <div class="topnav-logo"></div>
+    Beacon Transport
+  </div>
+  <div class="topnav-tabs">
+    <button class="topnav-tab active" onclick="switchRole('institution', this)">Institution</button>
+    <button class="topnav-tab" onclick="switchRole('operator', this)">Operator</button>
+    <button class="topnav-tab" onclick="switchRole('driver', this)">Driver</button>
+    <button class="topnav-tab" onclick="switchRole('regulator', this)">Regulator</button>
+  </div>
+  <div class="topnav-right">
+    <span style="font-size:12px;color:var(--text-muted)">Demo preview</span>
+  </div>
+</div>
+
+<div class="portal">
+
+<!-- ════════════════════════════════════════════════════
+     INSTITUTION
+════════════════════════════════════════════════════ -->
+<div id="institution" class="panel active">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-avatar sidebar-avatar--op">TG</div>
+      <div class="sidebar-name">Toronto General Hospital</div>
+      <div class="sidebar-role">Procurement officer</div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-link active-op"><span class="sidebar-icon">▦</span> Dashboard</button>
+      <button class="sidebar-link"><span class="sidebar-icon">⊟</span> Operators assessed</button>
+      <button class="sidebar-link"><span class="sidebar-icon">⚑</span> Red flags</button>
+      <button class="sidebar-link"><span class="sidebar-icon">✓</span> Contracts</button>
+      <button class="sidebar-link"><span class="sidebar-icon">⚙</span> Settings</button>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="status-dot status-dot--active"></span>
+      <span style="font-size:12px;color:var(--text-muted)">Active account</span>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="main-inner">
+
+      <div class="page-header">
+        <div>
+          <div class="page-title">Assessment dashboard</div>
+          <div class="page-sub">Transport procurement · Pre-contract compliance</div>
+        </div>
+        <button class="btn btn-op btn-sm">+ Add operator to assess</button>
+      </div>
+
+      <div class="metrics metrics-4">
+        <div class="metric">
+          <div class="metric-icon icon-blue">⊞</div>
+          <div class="metric-lbl">Operators assessed</div>
+          <div class="metric-val">3</div>
+        </div>
+        <div class="metric">
+          <div class="metric-icon icon-green">✓</div>
+          <div class="metric-lbl">Sections complete (avg)</div>
+          <div class="metric-val">74%</div>
+        </div>
+        <div class="metric">
+          <div class="metric-icon icon-amber">⚑</div>
+          <div class="metric-lbl">Open red flags</div>
+          <div class="metric-val" style="color:#842029">7</div>
+        </div>
+        <div class="metric">
+          <div class="metric-icon icon-green">⊡</div>
+          <div class="metric-lbl">Contracts active</div>
+          <div class="metric-val">1</div>
+        </div>
+      </div>
+
+      <div class="section-title">Operator comparison</div>
+      <div class="card" style="margin-bottom:16px;padding:0">
+        <table style="table-layout:fixed">
+          <thead>
+            <tr>
+              <th style="width:160px;border-radius:12px 0 0 0">Operator</th>
+              <th style="width:110px">Compliance score</th>
+              <th style="width:100px">Status</th>
+              <th>Top gap</th>
+              <th style="width:80px">Drivers</th>
+              <th style="width:90px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Blue Line Taxi</strong></td>
+              <td>
+                <div style="display:flex;align-items:center;gap:7px">
+                  <div class="progbar"><div class="progfill" style="width:82%;background:#198754"></div></div>
+                  <span style="font-size:12px;font-weight:600;color:#0a3622">82%</span>
+                </div>
+              </td>
+              <td><span class="badge badge-success">Recommended</span></td>
+              <td style="color:var(--text-muted);font-size:12px">Rural insurance confirmation pending</td>
+              <td style="font-size:13px;font-weight:500">142 <span style="color:var(--text-muted);font-size:11px">active</span></td>
+              <td><button class="btn btn-sm">View report</button></td>
+            </tr>
+            <tr>
+              <td><strong>Uber Technologies</strong></td>
+              <td>
+                <div style="display:flex;align-items:center;gap:7px">
+                  <div class="progbar"><div class="progfill" style="width:41%;background:#dc3545"></div></div>
+                  <span style="font-size:12px;font-weight:600;color:#842029">41%</span>
+                </div>
+              </td>
+              <td><span class="badge badge-danger">High risk</span></td>
+              <td style="color:var(--text-muted);font-size:12px">Insurance gaps · No OPP protocol · Arbitration clause</td>
+              <td style="font-size:13px;color:var(--text-muted)">—</td>
+              <td><button class="btn btn-sm">View report</button></td>
+            </tr>
+            <tr>
+              <td><strong>Airport Limousine</strong></td>
+              <td>
+                <div style="display:flex;align-items:center;gap:7px">
+                  <div class="progbar"><div class="progfill" style="width:63%;background:#ffc107"></div></div>
+                  <span style="font-size:12px;font-weight:600;color:#664d03">63%</span>
+                </div>
+              </td>
+              <td><span class="badge badge-warn">Partial</span></td>
+              <td style="color:var(--text-muted);font-size:12px">Vulnerable passenger protocol missing · AODA unconfirmed</td>
+              <td style="font-size:13px;color:var(--text-muted)">—</td>
+              <td><button class="btn btn-sm">View report</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div class="section-title">Blue Line Taxi · 18-section breakdown</div>
+          <div class="card" style="padding:12px 16px">
+            <div class="section-grid">
+              <div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Legal identity</span><span class="badge badge-success">Pass</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Licences / permits</span><span class="badge badge-success">Pass</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Driver contracts</span><span class="badge badge-success">Pass</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Driver onboarding</span><span class="badge badge-success">Pass</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Insurance</span><span class="badge badge-warn">Partial</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Vehicle safety</span><span class="badge badge-success">Pass</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Curbside verification</span><span class="badge badge-success">Pass</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Incident response</span><span class="badge badge-success">Pass</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Cameras / records</span><span class="badge badge-success">Pass</span></div>
+              </div>
+              <div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Complaint handling</span><span class="badge badge-success">Pass</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Accessibility</span><span class="badge badge-warn">Partial</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Pricing / billing</span><span class="badge badge-success">Pass</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Competition Act</span><span class="badge badge-success">Pass</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Labour compliance</span><span class="badge badge-success">Pass</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Data / privacy</span><span class="badge badge-success">Pass</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Contract terms</span><span class="badge badge-success">Pass</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Tax / licensing</span><span class="badge badge-success">Pass</span></div>
+                <div class="section-row2"><span style="flex:1;font-size:12px">Indemnity / liability</span><span class="badge badge-warn">Partial</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="section-title">Active alerts</div>
+          <div class="alert alert-warn">Insurance: Northlander corridor coverage not yet confirmed by Blue Line Taxi's insurer. Written confirmation due 14 Apr 2026.</div>
+          <div class="alert alert-danger">Uber: no formal OPP law enforcement protocol. Passenger data stored outside Canada — cross-border delay risk identified.</div>
+          <div class="alert alert-success">Blue Line Taxi contract ready for execution. Legal sign-off recommended before 30 Apr 2026.</div>
+          <div class="section-title">Operator compliance snapshots</div>
+          <div class="card" style="margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:14px">
+              <div class="score-ring ring-pass">82%</div>
+              <div>
+                <div style="font-weight:600;font-size:13px">Blue Line Taxi Corp.</div>
+                <div style="font-size:12px;color:var(--text-muted)">15 of 18 sections · 142 active drivers · Recommended</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:14px">
+              <div class="score-ring ring-fail">41%</div>
+              <div>
+                <div style="font-weight:600;font-size:13px">Uber Technologies Inc.</div>
+                <div style="font-size:12px;color:var(--text-muted)">7 of 18 sections complete · High risk</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     OPERATOR
+════════════════════════════════════════════════════ -->
+<div id="operator" class="panel">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-avatar sidebar-avatar--op">BL</div>
+      <div class="sidebar-name">Blue Line Taxi Corp.</div>
+      <div class="sidebar-role">Operator portal</div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-link active-op" onclick="showOpView('op-dash', this)"><span class="sidebar-icon">▦</span> Dashboard</button>
+      <button class="sidebar-link" onclick="showOpView('op-drivers', this)"><span class="sidebar-icon">◉</span> My drivers</button>
+      <button class="sidebar-link" onclick="showOpView('op-docs', this)"><span class="sidebar-icon">⊟</span> Documents</button>
+      <button class="sidebar-link" onclick="showOpView('op-compliance', this)"><span class="sidebar-icon">✓</span> Compliance status</button>
+      <button class="sidebar-link" onclick="showOpView('op-profile', this)"><span class="sidebar-icon">⚙</span> Company profile</button>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="status-dot status-dot--active"></span>
+      <span style="font-size:12px;color:var(--text-muted)">Active operator</span>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="main-inner">
+
+      <!-- Operator: Dashboard -->
+      <div id="op-dash" class="op-view">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Operator dashboard</div>
+            <div class="page-sub">Blue Line Taxi Corp. · Ontario licensed taxi operator</div>
+          </div>
+          <button class="btn btn-op btn-sm">+ Invite driver</button>
+        </div>
+        <div class="metrics metrics-4" style="margin-bottom:20px">
+          <div class="metric"><div class="metric-icon icon-blue">◉</div><div class="metric-lbl">Total drivers</div><div class="metric-val">142</div></div>
+          <div class="metric"><div class="metric-icon icon-green">✓</div><div class="metric-lbl">Active / verified</div><div class="metric-val">129</div></div>
+          <div class="metric"><div class="metric-icon icon-amber">⏳</div><div class="metric-lbl">Pending review</div><div class="metric-val">8</div></div>
+          <div class="metric"><div class="metric-icon icon-red">⚑</div><div class="metric-lbl">Expiry alerts</div><div class="metric-val" style="color:#842029">5</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:16px">
+          <div>
+            <div class="section-title">Driver roster (recent)</div>
+            <div class="card" style="padding:0">
+              <table style="table-layout:fixed">
+                <thead>
+                  <tr>
+                    <th style="width:170px">Driver</th>
+                    <th style="width:110px">Licence expiry</th>
+                    <th style="width:110px">Insurance expiry</th>
+                    <th style="width:90px">Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">MK</div><div><div style="font-weight:500;font-size:13px">Marcus K.</div><div style="font-size:11px;color:var(--text-muted)">Lic. #ON-4421</div></div></div></td>
+                    <td><span class="badge badge-success" style="font-size:11px">Dec 2026</span></td>
+                    <td><span class="badge badge-success" style="font-size:11px">Sep 2026</span></td>
+                    <td><span class="badge badge-teal">Verified</span></td>
+                    <td><button class="btn btn-sm">View</button></td>
+                  </tr>
+                  <tr>
+                    <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">AP</div><div><div style="font-weight:500;font-size:13px">Aisha P.</div><div style="font-size:11px;color:var(--text-muted)">Lic. #ON-3187</div></div></div></td>
+                    <td><span class="badge badge-success" style="font-size:11px">Mar 2027</span></td>
+                    <td><span class="badge badge-warn" style="font-size:11px">Exp May 2026</span></td>
+                    <td><span class="badge badge-warn">Expiring soon</span></td>
+                    <td><button class="btn btn-sm">View</button></td>
+                  </tr>
+                  <tr>
+                    <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar avatar-suspended">JD</div><div><div style="font-weight:500;font-size:13px">James D.</div><div style="font-size:11px;color:var(--text-muted)">Lic. #ON-2904</div></div></div></td>
+                    <td><span class="badge badge-success" style="font-size:11px">Nov 2026</span></td>
+                    <td><span class="badge badge-success" style="font-size:11px">Oct 2026</span></td>
+                    <td><span class="badge badge-danger">Suspended</span></td>
+                    <td><button class="btn btn-sm">View</button></td>
+                  </tr>
+                  <tr>
+                    <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">SN</div><div><div style="font-weight:500;font-size:13px">Sarah N.</div><div style="font-size:11px;color:var(--text-muted)">Lic. #ON-5512</div></div></div></td>
+                    <td><span class="badge badge-success" style="font-size:11px">Jan 2027</span></td>
+                    <td><span class="badge badge-success" style="font-size:11px">Jul 2026</span></td>
+                    <td><span class="badge badge-teal">Verified</span></td>
+                    <td><button class="btn btn-sm">View</button></td>
+                  </tr>
+                </tbody>
+              </table>
+              <div style="padding:10px 12px;border-top:0.5px solid var(--border)">
+                <button class="btn btn-sm" onclick="showOpView('op-drivers', document.querySelector('.sidebar-link:nth-child(2)'))">View all 142 drivers →</button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">Compliance submission</div>
+            <div class="card" style="margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <span style="font-size:13px;font-weight:600">Overall score</span>
+                <span class="badge badge-success">Recommended</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                <div class="progbar"><div class="progfill" style="width:82%;background:#198754"></div></div>
+                <span style="font-weight:700;font-size:15px;color:#0a3622">82%</span>
+              </div>
+              <div style="font-size:12px;color:var(--text-muted)">15 of 18 sections complete · 3 deficiencies open</div>
+            </div>
+            <div class="section-title">Recent documents</div>
+            <div class="card" style="padding:0">
+              <div class="list-row" style="padding:9px 12px"><span style="font-size:13px">⊟</span><div style="flex:1;margin-left:8px"><div style="font-size:12px;font-weight:500">Commercial insurance cert.</div><div style="font-size:11px;color:var(--text-muted)">Uploaded 8 Apr 2026</div></div><span class="badge badge-warn">Pending</span></div>
+              <div class="list-row" style="padding:9px 12px"><span style="font-size:13px">⊟</span><div style="flex:1;margin-left:8px"><div style="font-size:12px;font-weight:500">Corporate registration</div><div style="font-size:11px;color:var(--text-muted)">Uploaded 2 Apr 2026</div></div><span class="badge badge-success">Accepted</span></div>
+              <div class="list-row" style="padding:9px 12px;border-bottom:none"><span style="font-size:13px">⊟</span><div style="flex:1;margin-left:8px"><div style="font-size:12px;font-weight:500">Driver contract (current)</div><div style="font-size:11px;color:var(--text-muted)">Uploaded 2 Apr 2026</div></div><span class="badge badge-success">Accepted</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Operator: My drivers -->
+      <div id="op-drivers" class="op-view" style="display:none">
+        <div class="page-header">
+          <div>
+            <div class="page-title">My drivers</div>
+            <div class="page-sub">142 drivers · 129 verified · Only your drivers are visible here</div>
+          </div>
+          <button class="btn btn-op btn-sm">+ Invite driver</button>
+        </div>
+        <div class="alert alert-info" style="margin-bottom:16px">Drivers register themselves and select Blue Line Taxi during sign-up. Only drivers linked to your operator ID appear in this list.</div>
+        <div class="card" style="padding:0">
+          <table style="table-layout:fixed">
+            <thead>
+              <tr>
+                <th style="width:190px">Driver</th>
+                <th style="width:130px">Vehicle / plate</th>
+                <th style="width:110px">Licence expiry</th>
+                <th style="width:110px">Insurance expiry</th>
+                <th style="width:90px">Criminal check</th>
+                <th style="width:90px">Credential status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">MK</div><div><div style="font-weight:500;font-size:13px">Marcus K.</div><div style="font-size:11px;color:var(--text-muted)">marcus.k@email.com</div></div></div></td>
+                <td><div style="font-size:12px;font-weight:600">ABCD 123</div><div style="font-size:11px;color:var(--text-muted)">2021 Toyota Camry · Silver</div></td>
+                <td><span class="badge badge-success" style="font-size:11px">Dec 2026</span></td>
+                <td><span class="badge badge-success" style="font-size:11px">Sep 2026</span></td>
+                <td><span style="font-size:12px;color:#0a3622">✓ Clear · Jan 2026</span></td>
+                <td><span class="badge badge-teal">Verified</span></td>
+                <td><button class="btn btn-sm">View</button></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">AP</div><div><div style="font-weight:500;font-size:13px">Aisha P.</div><div style="font-size:11px;color:var(--text-muted)">aisha.p@email.com</div></div></div></td>
+                <td><div style="font-size:12px;font-weight:600">XYZ 987</div><div style="font-size:11px;color:var(--text-muted)">2019 Honda Civic · Blue</div></td>
+                <td><span class="badge badge-success" style="font-size:11px">Mar 2027</span></td>
+                <td><span class="badge badge-warn" style="font-size:11px">May 2026 ⚑</span></td>
+                <td><span style="font-size:12px;color:#0a3622">✓ Clear · Feb 2026</span></td>
+                <td><span class="badge badge-warn">Expiring soon</span></td>
+                <td><button class="btn btn-sm">View</button></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar avatar-suspended">JD</div><div><div style="font-weight:500;font-size:13px">James D.</div><div style="font-size:11px;color:var(--text-muted)">james.d@email.com</div></div></div></td>
+                <td><div style="font-size:12px;font-weight:600">MNO 456</div><div style="font-size:11px;color:var(--text-muted)">2020 Ford Escape · Black</div></td>
+                <td><span class="badge badge-success" style="font-size:11px">Nov 2026</span></td>
+                <td><span class="badge badge-success" style="font-size:11px">Oct 2026</span></td>
+                <td><span style="font-size:12px;color:#842029">⚑ Flagged · Pending review</span></td>
+                <td><span class="badge badge-danger">Suspended</span></td>
+                <td><button class="btn btn-danger btn-sm">Suspended</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Operator: Documents -->
+      <div id="op-docs" class="op-view" style="display:none">
+        <div class="page-header"><div class="page-title">Compliance documents</div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card"><div class="card-hdr">Upload document</div>
+            <div style="margin-bottom:10px"><div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Document type</div><select style="width:100%;padding:8px;border:0.5px solid var(--border);border-radius:8px;font-size:13px"><option>Commercial insurance certificate</option><option>Corporate registration</option><option>Driver contract</option><option>WSIB certificate</option><option>GST/HST registration</option></select></div>
+            <div style="margin-bottom:10px"><div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">File</div><div class="upload-zone">Drop PDF / DOCX here or click to browse<br><span style="font-size:11px">Max 20 MB · PDF, DOCX, JPG</span></div></div>
+            <div style="margin-bottom:14px"><div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Expiry date</div><input type="date" style="width:100%;padding:8px;border:0.5px solid var(--border);border-radius:8px;font-size:13px"></div>
+            <button class="btn btn-op" style="width:100%">Upload document</button>
+          </div>
+          <div class="card" style="padding:0">
+            <div style="padding:12px 16px;border-bottom:0.5px solid var(--border);font-weight:600;font-size:13px">Uploaded documents (34)</div>
+            <div class="list-row" style="padding:10px 14px"><div style="flex:1"><div style="font-size:12px;font-weight:500">commercial_insurance_cert.pdf</div><div style="font-size:11px;color:var(--text-muted)">Insurance certificate · Exp: Apr 2027</div></div><span class="badge badge-warn">Pending review</span></div>
+            <div class="list-row" style="padding:10px 14px"><div style="flex:1"><div style="font-size:12px;font-weight:500">corporate_registration_ON.pdf</div><div style="font-size:11px;color:var(--text-muted)">Corporate registration</div></div><span class="badge badge-success">Accepted</span></div>
+            <div class="list-row" style="padding:10px 14px"><div style="flex:1"><div style="font-size:12px;font-weight:500">driver_contract_v4.docx</div><div style="font-size:11px;color:var(--text-muted)">Driver contract (current version)</div></div><span class="badge badge-success">Accepted</span></div>
+            <div class="list-row" style="padding:10px 14px;border-bottom:none"><div style="flex:1"><div style="font-size:12px;font-weight:500">gst_hst_registration.pdf</div><div style="font-size:11px;color:var(--text-muted)">Tax registration</div></div><span class="badge badge-success">Accepted</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Operator: Compliance status -->
+      <div id="op-compliance" class="op-view" style="display:none">
+        <div class="page-header"><div class="page-title">Compliance status</div><div class="page-sub">Assessment requested by Toronto General Hospital</div></div>
+        <div class="alert alert-warn" style="margin-bottom:16px">3 deficiencies require your attention before the assessment can be finalised.</div>
+        <div class="card" style="padding:0">
+          <table style="table-layout:fixed">
+            <thead><tr><th style="width:200px">Section</th><th style="width:90px">Status</th><th>Required action</th><th style="width:80px">Due</th></tr></thead>
+            <tbody>
+              <tr><td>Legal identity</td><td><span class="badge badge-success">Complete</span></td><td style="font-size:12px;color:var(--text-muted)">All documents accepted</td><td>—</td></tr>
+              <tr><td>Insurance</td><td><span class="badge badge-danger">Action needed</span></td><td style="font-size:12px;color:#842029">Insurer written confirmation for Northlander corridor missing</td><td style="font-size:12px;color:#842029">14 Apr</td></tr>
+              <tr><td>Accessibility</td><td><span class="badge badge-warn">Partial</span></td><td style="font-size:12px;color:#664d03">WAV wait-time data for rural service area outstanding</td><td style="font-size:12px;color:#664d03">21 Apr</td></tr>
+              <tr><td>Indemnity / liability</td><td><span class="badge badge-warn">Partial</span></td><td style="font-size:12px;color:#664d03">Draft additional insured endorsement not yet uploaded</td><td style="font-size:12px;color:#664d03">28 Apr</td></tr>
+              <tr><td>Driver contracts</td><td><span class="badge badge-success">Complete</span></td><td style="font-size:12px;color:var(--text-muted)">Full contract, change log, consent records accepted</td><td>—</td></tr>
+              <tr><td>Vehicle safety</td><td><span class="badge badge-success">Complete</span></td><td style="font-size:12px;color:var(--text-muted)">Inspection certs and maintenance logs accepted</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Operator: Profile -->
+      <div id="op-profile" class="op-view" style="display:none">
+        <div class="page-header"><div class="page-title">Company profile</div></div>
+        <div class="card">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+            <div>
+              <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:10px">Company details</div>
+              <div class="field-row"><span class="field-label">Legal name</span><span class="field-value">Blue Line Taxi Corp.</span></div>
+              <div class="field-row"><span class="field-label">Operator type</span><span class="field-value">Licensed taxicab operator</span></div>
+              <div class="field-row"><span class="field-label">Email</span><span class="field-value">contact@blueline.ca</span></div>
+              <div class="field-row"><span class="field-label">Phone</span><span class="field-value">+1 (613) 555-0100</span></div>
+              <div class="field-row"><span class="field-label">City</span><span class="field-value">Ottawa, Ontario</span></div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:10px">Licence &amp; compliance officer</div>
+              <div class="field-row"><span class="field-label">Licence number</span><span class="field-value">TNC-ON-00421</span></div>
+              <div class="field-row"><span class="field-label">Issuing authority</span><span class="field-value">City of Ottawa</span></div>
+              <div class="field-row"><span class="field-label">Compliance officer</span><span class="field-value">Mark S.</span></div>
+              <div class="field-row"><span class="field-label">Officer email</span><span class="field-value">mark.s@blueline.ca</span></div>
+              <div class="field-row"><span class="field-label">Officer phone</span><span class="field-value">+1 (613) 555-0200</span></div>
+            </div>
+          </div>
+          <div style="margin-top:16px"><button class="btn btn-op btn-sm">Edit profile</button></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     DRIVER
+════════════════════════════════════════════════════ -->
+<div id="driver" class="panel">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-avatar sidebar-avatar--dr">MK</div>
+      <div class="sidebar-name">Marcus K.</div>
+      <div class="sidebar-role">Blue Line Taxi Corp.</div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-link active-dr" onclick="showDrView('dr-dash', this)"><span class="sidebar-icon">▦</span> My dashboard</button>
+      <button class="sidebar-link" onclick="showDrView('dr-profile', this)"><span class="sidebar-icon">◉</span> My profile</button>
+      <button class="sidebar-link" onclick="showDrView('dr-docs', this)"><span class="sidebar-icon">⊟</span> My documents</button>
+      <button class="sidebar-link" onclick="showDrView('dr-status', this)"><span class="sidebar-icon">✓</span> Credential status</button>
+      <button class="sidebar-link" onclick="showDrView('dr-qr', this)"><span class="sidebar-icon">⊡</span> My QR card</button>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="status-dot status-dot--active"></span>
+      <span style="font-size:12px;color:var(--text-muted)">Active driver</span>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="main-inner">
+
+      <!-- Driver: Dashboard -->
+      <div id="dr-dash" class="dr-view">
+        <div class="page-header">
+          <div>
+            <div class="page-title">My dashboard</div>
+            <div class="page-sub">Blue Line Taxi Corp. · Driver since Jan 2025</div>
+          </div>
+          <button class="btn btn-dr btn-sm" onclick="showDrView('dr-qr', document.querySelector('.sidebar-link:nth-child(5)'))">View my QR card</button>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:16px">
+            <div style="flex:1">
+              <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+                <span style="font-size:13px;font-weight:500">Profile completion</span>
+                <span style="font-size:13px;font-weight:700">87%</span>
+              </div>
+              <div class="progbar" style="height:8px"><div class="progfill" style="width:87%;background:var(--bt-blue)"></div></div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:5px">Add your WSIB number to reach 100%</div>
+            </div>
+            <div style="text-align:center;flex-shrink:0">
+              <span class="badge badge-teal" style="font-size:12px;padding:5px 14px">Verified</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <div class="section-title">Credential summary</div>
+            <div class="card" style="padding:0">
+              <div class="list-row" style="padding:10px 14px"><span style="color:var(--text-muted);width:20px">⊡</span><div style="flex:1"><div style="font-size:12px;font-weight:500">Driver's licence</div><div style="font-size:11px;color:var(--text-muted)">Class G · ON — A1234-56789</div></div><span class="badge badge-success" style="font-size:11px">Exp Dec 2026</span></div>
+              <div class="list-row" style="padding:10px 14px"><span style="color:var(--text-muted);width:20px">⊡</span><div style="flex:1"><div style="font-size:12px;font-weight:500">Vehicle</div><div style="font-size:11px;color:var(--text-muted)">2021 Toyota Camry · Silver · ABCD 123</div></div></div>
+              <div class="list-row" style="padding:10px 14px"><span style="color:var(--text-muted);width:20px">⊡</span><div style="flex:1"><div style="font-size:12px;font-weight:500">Insurance</div><div style="font-size:11px;color:var(--text-muted)">Intact Insurance · Commercial endorsement</div></div><span class="badge badge-success" style="font-size:11px">Exp Sep 2026</span></div>
+              <div class="list-row" style="padding:10px 14px;border-bottom:none"><span style="color:var(--text-muted);width:20px">⊡</span><div style="flex:1"><div style="font-size:12px;font-weight:500">Criminal check</div><div style="font-size:11px;color:var(--text-muted)">RCMP · Jan 2026</div></div><span style="font-size:12px;color:#0a3622;font-weight:500">✓ Clear</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">My documents</div>
+            <div class="card" style="padding:0;margin-bottom:12px">
+              <div class="list-row" style="padding:9px 14px"><div style="flex:1"><div style="font-size:12px;font-weight:500">licence_scan_front.jpg</div><div style="font-size:11px;color:var(--text-muted)">Driver's licence scan</div></div><span class="badge badge-success">Accepted</span></div>
+              <div class="list-row" style="padding:9px 14px"><div style="flex:1"><div style="font-size:12px;font-weight:500">insurance_cert_2025.pdf</div><div style="font-size:11px;color:var(--text-muted)">Insurance certificate</div></div><span class="badge badge-success">Accepted</span></div>
+              <div class="list-row" style="padding:9px 14px;border-bottom:none"><div style="flex:1"><div style="font-size:12px;font-weight:500">rcmp_check_jan2026.pdf</div><div style="font-size:11px;color:var(--text-muted)">Criminal record check</div></div><span class="badge badge-success">Accepted</span></div>
+            </div>
+            <button class="btn btn-sm" style="width:100%" onclick="showDrView('dr-docs', document.querySelector('.sidebar-link:nth-child(3)'))">Upload more documents</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Driver: Profile -->
+      <div id="dr-profile" class="dr-view" style="display:none">
+        <div class="page-header"><div class="page-title">My profile</div><div class="page-sub">This information is visible to Blue Line Taxi Corp. only</div></div>
+        <div class="card">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+            <div>
+              <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:10px">Personal details</div>
+              <div class="field-row"><span class="field-label">Full name</span><span class="field-value">Marcus K.</span></div>
+              <div class="field-row"><span class="field-label">Email</span><span class="field-value">marcus.k@email.com</span></div>
+              <div class="field-row"><span class="field-label">Phone</span><span class="field-value">+1 (613) 555-0301</span></div>
+              <div class="field-row"><span class="field-label">City</span><span class="field-value">Ottawa, Ontario</span></div>
+              <div class="field-row"><span class="field-label">Operator</span><span class="field-value">Blue Line Taxi Corp.</span></div>
+              <div style="margin-top:14px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:10px">Driver's licence</div>
+              <div class="field-row"><span class="field-label">Licence number</span><span class="field-value">A1234-56789-01234</span></div>
+              <div class="field-row"><span class="field-label">Province</span><span class="field-value">Ontario</span></div>
+              <div class="field-row"><span class="field-label">Class</span><span class="field-value">G</span></div>
+              <div class="field-row"><span class="field-label">Expiry</span><span class="field-value"><span class="badge badge-success" style="font-size:11px">Dec 2026</span></span></div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:10px">Vehicle</div>
+              <div class="field-row"><span class="field-label">Make &amp; model</span><span class="field-value">2021 Toyota Camry</span></div>
+              <div class="field-row"><span class="field-label">Colour</span><span class="field-value">Silver</span></div>
+              <div class="field-row"><span class="field-label">Plate</span><span class="field-value" style="font-weight:700;font-size:14px">ABCD 123</span></div>
+              <div style="margin-top:14px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:10px">Insurance</div>
+              <div class="field-row"><span class="field-label">Provider</span><span class="field-value">Intact Insurance</span></div>
+              <div class="field-row"><span class="field-label">Policy number</span><span class="field-value">POL-2025-88432</span></div>
+              <div class="field-row"><span class="field-label">Type</span><span class="field-value">Commercial endorsement</span></div>
+              <div class="field-row"><span class="field-label">Expiry</span><span class="field-value"><span class="badge badge-success" style="font-size:11px">Sep 2026</span></span></div>
+            </div>
+          </div>
+          <div style="margin-top:16px"><button class="btn btn-dr btn-sm">Edit profile</button></div>
+        </div>
+      </div>
+
+      <!-- Driver: Documents -->
+      <div id="dr-docs" class="dr-view" style="display:none">
+        <div class="page-header"><div class="page-title">My documents</div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card"><div class="card-hdr">Upload document</div>
+            <div style="margin-bottom:10px"><div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Document type</div><select style="width:100%;padding:8px;border:0.5px solid var(--border);border-radius:8px;font-size:13px"><option>Driver's licence (front and back)</option><option>Insurance certificate</option><option>Criminal record check (RCMP)</option><option>Vulnerable sector check</option><option>Driving abstract / record</option><option>Vehicle safety inspection certificate</option></select></div>
+            <div style="margin-bottom:10px"><div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">File</div><div class="upload-zone">Drop PDF / JPG here<br><span style="font-size:11px">Max 20 MB · PDF, DOCX, JPG</span></div></div>
+            <div style="margin-bottom:14px"><div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Document expiry date</div><input type="date" style="width:100%;padding:8px;border:0.5px solid var(--border);border-radius:8px;font-size:13px"></div>
+            <button class="btn btn-dr" style="width:100%">Upload</button>
+          </div>
+          <div class="card" style="padding:0">
+            <div style="padding:12px 16px;border-bottom:0.5px solid var(--border);font-weight:600;font-size:13px">My uploads (6)</div>
+            <div class="list-row" style="padding:9px 14px"><div style="flex:1"><div style="font-size:12px;font-weight:500">licence_scan_front.jpg</div><div style="font-size:11px;color:var(--text-muted)">Driver's licence · Exp Dec 2026</div></div><span class="badge badge-success">Accepted</span></div>
+            <div class="list-row" style="padding:9px 14px"><div style="flex:1"><div style="font-size:12px;font-weight:500">insurance_cert_2025.pdf</div><div style="font-size:11px;color:var(--text-muted)">Insurance · Exp Sep 2026</div></div><span class="badge badge-success">Accepted</span></div>
+            <div class="list-row" style="padding:9px 14px"><div style="flex:1"><div style="font-size:12px;font-weight:500">rcmp_check_jan2026.pdf</div><div style="font-size:11px;color:var(--text-muted)">Criminal record check · Jan 2026</div></div><span class="badge badge-success">Accepted</span></div>
+            <div class="list-row" style="padding:9px 14px"><div style="flex:1"><div style="font-size:12px;font-weight:500">vehicle_inspection_2025.pdf</div><div style="font-size:11px;color:var(--text-muted)">Vehicle inspection · Nov 2025</div></div><span class="badge badge-success">Accepted</span></div>
+            <div class="list-row" style="padding:9px 14px;border-bottom:none"><div style="flex:1"><div style="font-size:12px;font-weight:500">driving_abstract_2026.pdf</div><div style="font-size:11px;color:var(--text-muted)">Driving abstract · Mar 2026</div></div><span class="badge badge-success">Accepted</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Driver: Credential status -->
+      <div id="dr-status" class="dr-view" style="display:none">
+        <div class="page-header"><div class="page-title">Credential status</div></div>
+        <div style="display:grid;grid-template-columns:1fr 260px;gap:16px">
+          <div>
+            <div class="card">
+              <div class="cred-block">
+                <div class="cred-icon cred-icon-ok">⊡</div>
+                <div style="flex:1">
+                  <div style="font-weight:600;font-size:13px">Driver's licence</div>
+                  <div style="font-size:12px;color:var(--text-muted)">Class G · Ontario · A1234-56789-01234</div>
+                  <div style="margin-top:5px"><span class="badge badge-success" style="font-size:11px">Valid until Dec 2026 (8 months)</span></div>
+                </div>
+                <span class="badge badge-success">Valid</span>
+              </div>
+              <div class="cred-block">
+                <div class="cred-icon cred-icon-ok">⊡</div>
+                <div style="flex:1">
+                  <div style="font-weight:600;font-size:13px">Insurance</div>
+                  <div style="font-size:12px;color:var(--text-muted)">Intact Insurance · POL-2025-88432 · Commercial endorsement</div>
+                  <div style="margin-top:5px"><span class="badge badge-success" style="font-size:11px">Valid until Sep 2026 (5 months)</span></div>
+                </div>
+                <span class="badge badge-success">Valid</span>
+              </div>
+              <div class="cred-block">
+                <div class="cred-icon cred-icon-ok">⊡</div>
+                <div style="flex:1">
+                  <div style="font-weight:600;font-size:13px">Criminal record check</div>
+                  <div style="font-size:12px;color:var(--text-muted)">RCMP — conducted Jan 2026</div>
+                  <div style="margin-top:5px"><span class="badge badge-success" style="font-size:11px">Clear · Within 12-month window</span></div>
+                </div>
+                <span class="badge badge-success">Clear</span>
+              </div>
+              <div class="cred-block">
+                <div class="cred-icon cred-icon-ok">⊡</div>
+                <div style="flex:1">
+                  <div style="font-weight:600;font-size:13px">Vehicle inspection</div>
+                  <div style="font-size:12px;color:var(--text-muted)">Certified third-party inspection · Nov 2025</div>
+                  <div style="margin-top:5px"><span class="badge badge-success" style="font-size:11px">Current</span></div>
+                </div>
+                <span class="badge badge-success">Pass</span>
+              </div>
+              <div class="cred-block" style="border-bottom:none">
+                <div class="cred-icon cred-icon-warn">⊡</div>
+                <div style="flex:1">
+                  <div style="font-weight:600;font-size:13px">Driving abstract</div>
+                  <div style="font-size:12px;color:var(--text-muted)">Mar 2026 · Minor infraction noted</div>
+                  <div style="margin-top:5px"><span class="badge badge-warn" style="font-size:11px">Under review</span></div>
+                </div>
+                <span class="badge badge-warn">Review</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card" style="text-align:center;padding:24px 16px;margin-bottom:12px">
+              <div class="big-status big-status-ok">✓</div>
+              <div style="font-weight:700;font-size:16px;margin-bottom:4px">Verified</div>
+              <div style="font-size:12px;color:var(--text-muted)">Overall credential status</div>
+            </div>
+            <div class="card">
+              <div style="font-weight:600;font-size:13px;margin-bottom:10px">Profile completion</div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px">87% complete</span></div>
+              <div class="progbar" style="height:8px;margin-bottom:8px"><div class="progfill" style="width:87%;background:var(--bt-blue)"></div></div>
+              <div style="font-size:11px;color:var(--text-muted)">Missing: WSIB number</div>
+              <button class="btn btn-sm" style="width:100%;margin-top:12px" onclick="showDrView('dr-profile', document.querySelector('.sidebar-link:nth-child(2)'))">Update profile</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Driver: QR Card -->
+      <div id="dr-qr" class="dr-view" style="display:none">
+        <div class="page-header">
+          <div>
+            <div class="page-title">My QR identity card</div>
+            <div class="page-sub">Show this to passengers for instant curbside verification</div>
+          </div>
+          <button class="btn btn-sm">Regenerate QR</button>
+        </div>
+        <div style="display:grid;grid-template-columns:360px 1fr;gap:20px">
+          <div>
+            <div class="qr-card">
+              <div class="qr-card-top">
+                <div class="qr-card-brand">Beacon Transport</div>
+                <div class="qr-card-sub">Driver identity card</div>
+              </div>
+              <div class="qr-card-body">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+                  <div class="avatar-lg">MK</div>
+                  <div>
+                    <div style="font-weight:700;font-size:15px">Marcus K.</div>
+                    <div style="font-size:12px;color:var(--text-muted)">Blue Line Taxi Corp.</div>
+                    <div style="margin-top:4px"><span class="badge badge-teal" style="font-size:11px">Verified</span></div>
+                  </div>
+                </div>
+                <div class="qr-placeholder">
+                  <div class="qr-grid" id="qrGrid"></div>
+                </div>
+                <div style="text-align:center;font-size:11px;color:var(--text-muted);margin-bottom:12px">Scan to verify identity at curbside</div>
+                <div class="qr-card-field"><span class="lbl">Licence</span><span style="font-weight:500">A1234-56789 · Class G</span></div>
+                <div class="qr-card-field"><span class="lbl">Licence expiry</span><span style="color:#0a3622;font-weight:500">Dec 2026</span></div>
+                <div class="qr-card-field"><span class="lbl">Vehicle plate</span><span style="font-weight:700;font-size:13px">ABCD 123</span></div>
+                <div class="qr-card-field"><span class="lbl">Insurance expiry</span><span style="color:#0a3622;font-weight:500">Sep 2026</span></div>
+                <div class="qr-card-field"><span class="lbl">Criminal check</span><span style="color:#0a3622;font-weight:500">✓ Clear · Jan 2026</span></div>
+              </div>
+              <div class="qr-card-footer">Verify at beacon-transport.ca/verify/e8f2a1… · Valid until 16 May 2026</div>
+            </div>
+            <button class="btn" style="width:100%;margin-top:10px">🖨 Print card</button>
+          </div>
+          <div>
+            <div class="section-title">How to use your QR card</div>
+            <div class="card" style="margin-bottom:12px">
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <div style="display:flex;gap:12px;align-items:flex-start"><div style="width:24px;height:24px;border-radius:50%;background:var(--bt-teal-light);color:var(--bt-teal);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0">1</div><div style="font-size:13px">Show the QR code to your passenger before they enter the vehicle.</div></div>
+                <div style="display:flex;gap:12px;align-items:flex-start"><div style="width:24px;height:24px;border-radius:50%;background:var(--bt-teal-light);color:var(--bt-teal);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0">2</div><div style="font-size:13px">They scan it with any smartphone camera — no app needed.</div></div>
+                <div style="display:flex;gap:12px;align-items:flex-start"><div style="width:24px;height:24px;border-radius:50%;background:var(--bt-teal-light);color:var(--bt-teal);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0">3</div><div style="font-size:13px">They instantly see your name, licence, vehicle plate, insurance expiry, and criminal check result.</div></div>
+                <div style="display:flex;gap:12px;align-items:flex-start"><div style="width:24px;height:24px;border-radius:50%;background:var(--bt-teal-light);color:var(--bt-teal);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0">4</div><div style="font-size:13px">Each scan is recorded with a timestamp in the Beacon Transport audit trail.</div></div>
+              </div>
+            </div>
+            <div class="section-title">QR code info</div>
+            <div class="card">
+              <div class="field-row"><span class="field-label">Scanned</span><span class="field-value">24 times</span></div>
+              <div class="field-row"><span class="field-label">Last scan</span><span class="field-value">Today, 09:14 AM</span></div>
+              <div class="field-row"><span class="field-label">Valid until</span><span class="field-value">16 May 2026</span></div>
+              <div class="field-row" style="border-bottom:none"><span class="field-label">Status</span><span class="field-value"><span class="badge badge-success">Active</span></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     REGULATOR
+════════════════════════════════════════════════════ -->
+<div id="regulator" class="panel">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-avatar sidebar-avatar--op" style="background:#f8d7da;color:#842029">OPP</div>
+      <div class="sidebar-name">OPP — Nipissing West</div>
+      <div class="sidebar-role">Regulator / law enforcement</div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-link active-op"><span class="sidebar-icon">⊡</span> Record requests</button>
+      <button class="sidebar-link"><span class="sidebar-icon">⊟</span> Audit trail</button>
+      <button class="sidebar-link"><span class="sidebar-icon">◉</span> Operator snapshots</button>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="badge badge-info" style="font-size:11px">Read-only access</span>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="main-inner">
+
+      <div class="page-header">
+        <div>
+          <div class="page-title">Regulator &amp; audit access</div>
+          <div class="page-sub">Law enforcement · OPP · Municipal licensing · Audit officers</div>
+        </div>
+        <span class="badge badge-info" style="font-size:12px;padding:5px 12px">Read-only access</span>
+      </div>
+
+      <div class="metrics metrics-4">
+        <div class="metric"><div class="metric-icon icon-blue">⊡</div><div class="metric-lbl">Total trips logged</div><div class="metric-val">2,481</div></div>
+        <div class="metric"><div class="metric-icon icon-amber">⊟</div><div class="metric-lbl">Law enf. requests</div><div class="metric-val">3</div></div>
+        <div class="metric"><div class="metric-icon icon-green">✓</div><div class="metric-lbl">Avg response time</div><div class="metric-val">4 min</div></div>
+        <div class="metric"><div class="metric-icon icon-green">⊡</div><div class="metric-lbl">Records producible</div><div class="metric-val" style="color:#0a3622">100%</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div>
+          <div class="section-title">Submit record request</div>
+          <div class="card">
+            <div style="margin-bottom:10px"><div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Trip ID or date range</div><input type="text" placeholder="e.g. TRP-20260409-0042 or 2026-04-08" style="width:100%;padding:8px;border:0.5px solid var(--border);border-radius:8px;font-size:13px"></div>
+            <div style="margin-bottom:10px"><div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Record types needed</div><select style="width:100%;padding:8px;border:0.5px solid var(--border);border-radius:8px;font-size:13px"><option>Driver identity + contact</option><option>GPS route data (full)</option><option>In-app communications</option><option>Payment records</option><option>Full incident package</option></select></div>
+            <div style="margin-bottom:14px"><div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Priority</div><select style="width:100%;padding:8px;border:0.5px solid var(--border);border-radius:8px;font-size:13px"><option>Emergency — produce within 15 min</option><option>Urgent — produce within 1 hour</option><option>Standard — produce within 24 hours</option></select></div>
+            <button class="btn btn-op" style="width:100%">Submit request</button>
+          </div>
+        </div>
+        <div>
+          <div class="section-title">Recent requests</div>
+          <div class="card" style="padding:0">
+            <div class="list-row" style="padding:10px 14px">
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:500">OPP — Nipissing West</div>
+                <div style="font-size:11px;color:var(--text-muted)">Driver identity · TRP-20260401 · Emergency</div>
+              </div>
+              <span class="badge badge-success">Produced · 8 min</span>
+            </div>
+            <div class="list-row" style="padding:10px 14px">
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:500">Toronto Police Service</div>
+                <div style="font-size:11px;color:var(--text-muted)">GPS route + payment · TRP-20260322 · Urgent</div>
+              </div>
+              <span class="badge badge-success">Produced · 3 min</span>
+            </div>
+            <div class="list-row" style="padding:10px 14px;border-bottom:none">
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:500">City of Toronto Licensing</div>
+                <div style="font-size:11px;color:var(--text-muted)">Operator compliance audit · Standard</div>
+              </div>
+              <span class="badge badge-warn">In progress</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Audit trail — tamper-evident log</div>
+      <div class="card" style="padding:0;margin-bottom:16px">
+        <table style="table-layout:fixed">
+          <thead>
+            <tr>
+              <th style="width:140px">Timestamp</th>
+              <th style="width:130px">Actor</th>
+              <th>Action</th>
+              <th style="width:95px">Record type</th>
+              <th style="width:75px">Chain hash</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="font-size:12px;color:var(--text-muted)">2026-04-09 08:42</td><td style="font-size:12px">System</td><td style="font-size:12px">Trip record sealed — TRP-20260409-0118</td><td><span class="badge badge-neutral">Trip data</span></td><td class="hash">a3f9…c12</td></tr>
+            <tr><td style="font-size:12px;color:var(--text-muted)">2026-04-09 07:15</td><td style="font-size:12px">OPP · Nipissing</td><td style="font-size:12px">Record request fulfilled — driver identity TRP-20260401</td><td><span class="badge badge-info">Law enf.</span></td><td class="hash">b71d…e44</td></tr>
+            <tr><td style="font-size:12px;color:var(--text-muted)">2026-04-08 22:01</td><td style="font-size:12px">System</td><td style="font-size:12px">Driver suspension logged — James D. · criminal flag raised</td><td><span class="badge badge-danger">Driver</span></td><td class="hash">f04a…88c</td></tr>
+            <tr><td style="font-size:12px;color:var(--text-muted)">2026-04-08 16:33</td><td style="font-size:12px">Blue Line (operator)</td><td style="font-size:12px">Document uploaded — commercial insurance certificate</td><td><span class="badge badge-neutral">Document</span></td><td class="hash">2c8e…51f</td></tr>
+            <tr><td style="font-size:12px;color:var(--text-muted)">2026-04-08 09:00</td><td style="font-size:12px">Compliance engine</td><td style="font-size:12px">Section score updated — Insurance: Partial (was: Action needed)</td><td><span class="badge badge-neutral">Score</span></td><td class="hash">9d3b…c77</td></tr>
+            <tr><td style="font-size:12px;color:var(--text-muted)">2026-04-07 14:20</td><td style="font-size:12px">Marcus K. (driver)</td><td style="font-size:12px">QR code generated and activated — 24 scans recorded</td><td><span class="badge badge-teal">Driver QR</span></td><td class="hash">3a11…d9f</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-title">Operator compliance snapshots</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div class="score-ring ring-pass">82%</div>
+            <div>
+              <div style="font-weight:600;font-size:13px">Blue Line Taxi Corp.</div>
+              <div style="font-size:12px;color:var(--text-muted)">15 of 18 sections · 142 drivers · Recommended</div>
+              <div style="font-size:12px;color:var(--text-muted)">Last assessed 9 Apr 2026</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div class="score-ring ring-fail">41%</div>
+            <div>
+              <div style="font-weight:600;font-size:13px">Uber Technologies Inc.</div>
+              <div style="font-size:12px;color:var(--text-muted)">7 of 18 sections · High risk · Not recommended</div>
+              <div style="font-size:12px;color:var(--text-muted)">Last assessed 9 Apr 2026</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+function switchRole(role, tabEl) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.topnav-tab').forEach(t => { t.classList.remove('active'); t.classList.remove('active-teal'); });
+  document.getElementById(role).classList.add('active');
+  if (role === 'driver') {
+    tabEl.classList.add('active-teal');
+  } else {
+    tabEl.classList.add('active');
+  }
+}
+
+function showOpView(viewId, linkEl) {
+  document.querySelectorAll('.op-view').forEach(v => v.style.display = 'none');
+  document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active-op'));
+  document.getElementById(viewId).style.display = 'block';
+  if (linkEl) linkEl.classList.add('active-op');
+}
+
+function showDrView(viewId, linkEl) {
+  document.querySelectorAll('.dr-view').forEach(v => v.style.display = 'none');
+  document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active-dr'));
+  document.getElementById(viewId).style.display = 'block';
+  if (linkEl) linkEl.classList.add('active-dr');
+}
+
+/* Draw a simple QR-like pattern */
+(function() {
+  const grid = document.getElementById('qrGrid');
+  if (!grid) return;
+  const pattern = [
+    1,1,1,1,1,1,1,0,
+    1,0,0,0,0,0,1,0,
+    1,0,1,1,1,0,1,1,
+    1,0,1,0,1,0,1,0,
+    1,0,1,1,1,0,1,1,
+    1,0,0,0,0,0,1,0,
+    1,1,1,1,1,1,1,0,
+    0,1,0,1,0,1,0,1,
+  ];
+  for (let i = 0; i < 64; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'qr-cell';
+    cell.style.background = pattern[i] ? '#1D5E8A' : 'transparent';
+    grid.appendChild(cell);
+  }
+})();
+</script>
+</body>
+</html>
